@@ -1,0 +1,21 @@
+function [ModA] = Extract_ModA()
+d=uigetdir('L:\For_AMR','Select Recordings Folder');
+[NFileName,NPathName] = uigetfile('*.xlsx','Select Excel file',...
+    'L:\For_AMR');
+e=strcat(NPathName,NFileName);
+%[num,txt]=xlsread(e,'A2:A278'); %For Thea DB
+%[num,txt]=xlsread(e,'A2:A89'); %For Monica DB
+%[num,txt]=xlsread(e,'A2:A260');  %For Monica DB
+%[num,txt]=xlsread(e,'Sheet1','A2:A667');  %For Monica control DB
+[num,txt]=xlsread(e,'Sheet1','A1:A113');  %For Monica control DB
+%txt1=cell2mat(txt);
+%files=dir(fullfile(d,'*.wav'));
+%audio=cell(1,size(files,1));
+ModA=zeros(size(txt,1),1);
+for k=1:size(txt,1)
+  %[y,fs]=audioread(strcat(d,'\',txt1(k,:),'_sentence.wav')); %For Thea DB
+  [y,fs]=audioread(strcat(d,'\',txt{k})); %For Monika DB
+  y=resample(y,16000,fs);
+  [ModA(k),ModA_k,ModA_k_n]=ModA_nonintrusive(y, 16000,20,4);
+end
+xlswrite(e,ModA,6);

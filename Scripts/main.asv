@@ -1,0 +1,210 @@
+%%
+clear;
+close all;
+clc;
+%%
+%%%%%%%%Adding the scripts pathes%%%%
+addpath Feature_Extraction\SRMR_Features_Extraction;
+addpath Feature_Extraction\SRMR_Features_Extraction\SRMRToolbox-master;
+addpath Feature_Extraction\SRMR_Features_Extraction\SRMRToolbox-master\test;
+addpath Feature_Extraction\SRMR_Features_Extraction\SRMRToolbox-master\libs;
+addpath Feature_Extraction\SRMR_Features_Extraction\SRMRToolbox-master\libs\vad;
+addpath Feature_Extraction\SRMR_Features_Extraction\SRMRToolbox-master\libs\PreProc;
+addpath Feature_Extraction\SRMR_Features_Extraction\SRMRToolbox-master\libs\auditory;
+addpath Feature_Extraction\ModA_Features_Extraction;
+addpath Feature_Extraction\MFCC_Features_Extraction;
+addpath Feature_Extraction\LCQA_Features_Extraction;
+addpath Feature_Extraction\GFCC_Features_Extraction;
+addpath Feature_Selection;
+addpath Feature_Extraction;
+addpath Subjective_Scores_Discription;
+
+%%
+%%%%%%%%Show subjective scores%%%%%%%
+%This is to show the subjective quality scores obtaned by researches in the
+%School of communication and speech disorders. 4 graphs are shown
+%describing the quality scores in 4 different scenarios. For more details
+%please check the article " Objective and Subjective Speech Quality
+%Assessment of Amplification Devices for Patients with Parkinson's
+%Disease".
+clear,clc;
+close all;
+%Loading the subjective scores.
+load('Avj_sub_sc');
+mx=mx*100;mxc=mxc*100;stde=stde*100;stdec=stdec*100;
+plot_names=['(a)' '(b)' 'c' 'd'];
+for i=1:4
+    %     subplot(2,2,i)
+    figure;
+    barwitherr([stde(i,:); stdec(i,:)]',[mx(i,:);mxc(i,:)]');
+    xtlabels={'AddVox','BoomVox','ChatterVox','No Amp','Oticon','SoniVox','Spokeman','Voicette'};
+    xticklabels(xtlabels);
+    xtickangle(45);
+    ylim([0 100]);
+    %title(plot_names(i));
+    legend('Parkinsonian subjects','Control subjects','Location','northeast');
+    grid on;
+    set(gca,'FontSize',14,...
+        'FontName','Times')
+    xlabel({'Amplifier Type'},...
+        'FontUnits','points',...
+        'interpreter','latex',...
+        'FontWeight','normal',...
+        'FontSize',14,...
+        'FontName','Times')
+    ylabel({'Averaged Subjective Quality Ratings'},...
+        'FontUnits','points',...
+        'interpreter','latex',...
+        'FontWeight','normal',...
+        'FontSize',14,...
+        'FontName','Times')
+end
+%%
+%%%%%%%Features Extraction%%%%%%%%%%%%%%%
+%These scripts are used to extract the accoustic and cepstrum features from
+%the audio recording database. These scripts require the audio eav files to
+%be in one directory. They also require the audio file names to be stored
+%in an excel sheet. For more details, please check the comments in these m
+%files.
+clear;close all;clc;
+SRMR_F=Extract_SRMR(); %Extracting SRMR feature
+ModA_F=Extract_ModA(); %Extracting ModA feature
+LCQA_F=Extract_LCQA(); %Extracting LCQA features
+MFCC_F=Extract_MFCC(); %Extracting MFCC features
+GFCC_F=Extract_GFCC(); %Extracting GFCC features
+%%
+%%%%%%%SRMR and ModA Discription%%%%%%%%%
+clear;close all;clc;
+load('Single_Feature_Var')
+%%%%%%%SRMR_PLlot%%%%%%%%%%%%%%%%%%%%%%%%
+figure(1)
+scatter(sit0*100,srmrsit0,'o','r');
+hold on
+scatter(co0*100,srmrco0,'o','r');
+hold on
+scatter(co65*100,srmrco65,'o','r');
+hold on
+scatter(sit65*100,srmrsit65,'o','r');
+xlim([0 100]);
+ylim([0 6]);
+grid on;
+%legend('SQT(no noise)','Conversation(no noise)','Conversation(noise)','SQT(noise)','Location','southeast');
+set(gca,'FontSize',11,...
+    'FontName','Times')
+ylabel({'Objective Scores'},...
+    'FontUnits','points',...
+    'interpreter','latex',...
+    'FontWeight','normal',...
+    'FontSize',11,...
+    'FontName','Times')
+xlabel('Subjective Scores',...
+    'FontUnits','points',...
+    'interpreter','latex',...
+    'FontWeight','normal',...
+    'FontSize',11,...
+    'FontName','Times')
+
+%%%%%%%%%%%%%ModA_plot%%%%%%%%%%%%%%%%%%%%%%
+figure(2)
+scatter(sit0*100,modasit0,'*','b');
+hold on
+scatter(co0*100,modaco0,'*','b');
+hold on
+scatter(co65*100,modaco65,'*','b');
+hold on
+scatter(sit65*100,modasit65,'*','b');
+xlim([0 100]);
+ylim([0 2]);
+grid on;
+%legend('SQT(no noise)','Conversation(no noise)','Conversation(noise)','SQT(noise)','Location','southeast');
+set(gca,'FontSize',11,...
+    'FontName','Times')
+ylabel({'Objective Scores'},...
+    'FontUnits','points',...
+    'interpreter','latex',...
+    'FontWeight','normal',...
+    'FontSize',11,...
+    'FontName','Times')
+xlabel('Subjective Scores',...
+    'FontUnits','points',...
+    'interpreter','latex',...
+    'FontWeight','normal',...
+    'FontSize',11,...
+    'FontName','Times')
+
+%%
+%%%%%%%LCQA non reduced Objective models training%
+%This script is to train LCQA objective models. The used machine algorithms
+%are linear regression (LR), support vector regression (SVR), Gaussian
+%process regression (GPR), and deep neural networks (DNN). These models are
+%utilizing the whole fLCQA feature set.
+clear;close all;clc;
+load('LCQA_Full');
+LCQA_LR=trainLCQA_LR(LCQA_Input);
+LCQA_SVR=trainLCQA_SVR(LCQA_Input);
+LCQA_GPR=trainLCQA_GPR(LCQA_Input);
+LCQA_DNN=run_net(LCQA_Training_mx,LCQA_Training_labels);
+Training_Correlation=corr(LCQA_Training_labels,LCQA_LR.predictFcn(LCQA_Training_mx));
+Test_Correlation=corr(LCQA_Test_labels,LCQA_LR.predictFcn(LCQA_Test_mx));
+%%%%%%%LCQA reduced Objective models training%%%%%
+%This script is to train reduced LCQA objective models. Instead of using
+%the whole LCQA features and being proned to overfitting, a feature
+%reduction agorithm is applied on the training matrix before training the objective models. 
+%please check the article " Objective and Subjective Speech Quality
+%Assessment of Amplification Devices for Patients with Parkinson's
+%Disease".
+%This is to reduce the number of LCQA features from 40 features to 7
+%features
+[MSE_train,MSE_test,M] = Select_Features(LCQA_Training_mx,LCQA_Training_labels);
+LCQA_Red_Training_mx=LCQA_Training_mx(:,M(1:7));
+LCQA_Red_Test_mx=LCQA_Test_mx(:,M(1:7));
+%Then we comple
+LCQA_Red_Input=[LCQA_Red_Training_mx LCQA_Training_labels];
+LCQA_LR_Red=trainLCQA_LR_Red(LCQA_Red_Input);
+LCQA_SVR_Red=trainLCQA_SVR_Red(LCQA_Red_Input);
+LCQA_GPR_Red=trainLCQA_GPR_Red(LCQA_Red_Input);
+LCQA_DNN_Red=run_net(LCQA_Training_mx,LCQA_Training_labels);
+Training_Correlation=corr(LCQA_Training_labels,LCQA_LR_Red.predictFcn(LCQA_Red_Training_mx));
+Test_Correlation=corr(LCQA_Test_labels,LCQA_LR_Red.predictFcn(LCQA_Red_Test_mx));
+%%
+%%%%%%%MFCC non reduced Objective models training%
+clear;close all;clc;
+load('MFCC_Full');
+MFCC_LR=trainMFCC_LR(MFCC_Input);
+MFCC_SVR=trainMFCC_SVR(MFCC_Input);
+MFCC_GPR=trainMFCC_GPR(MFCC_Input);
+MFCC_DNN=run_net(MFCC_Training_mx,MFCC_Training_labels);
+Training_Correlation=corr(MFCC_Training_labels,MFCC_LR.predictFcn(MFCC_Training_mx));
+Test_Correlation=corr(MFCC_Test_labels,MFCC_LR.predictFcn(MFCC_Test_mx));
+%%%%%%%MFCC reduced Objective models training%%%%%
+[MSE_train,MSE_test,M] = Select_Features(MFCC_Training_mx,MFCC_Training_labels);
+MFCC_Red_Training_mx=MFCC_Training_mx(:,M(1:7));
+MFCC_Red_Test_mx=MFCC_Test_mx(:,M(1:7));
+MFCC_Red_Input=[MFCC_Red_Training_mx MFCC_Training_labels];
+MFCC_LR_Red=trainMFCC_LR_Red(MFCC_Red_Input);
+MFCC_SVR_Red=trainMFCC_SVR_Red(MFCC_Red_Input);
+MFCC_GPR_Red=trainMFCC_GPR_Red(MFCC_Red_Input);
+MFCC_DNN_Red=run_net(MFCC_Training_mx,MFCC_Training_labels);
+Training_Correlation=corr(MFCC_Training_labels,MFCC_LR_Red.predictFcn(MFCC_Red_Training_mx));
+Test_Correlation=corr(MFCC_Test_labels,MFCC_LR_Red.predictFcn(MFCC_Red_Test_mx));
+%%
+%%%%%%%GFCC non reduced Objective models training%
+clear;close all;clc;
+load('GFCC_Full');
+GFCC_LR=trainGFCC_LR(GFCC_Input);
+GFCC_SVR=trainGFCC_SVR(GFCC_Input);
+GFCC_GPR=trainGFCC_GPR(GFCC_Input);
+GFCC_DNN=run_net(GFCC_Training_mx,GFCC_Training_labels);
+Training_Correlation=corr(GFCC_Training_labels,GFCC_LR.predictFcn(GFCC_Training_mx));
+Test_Correlation=corr(GFCC_Test_labels,GFCC_LR.predictFcn(GFCC_Test_mx));
+%%%%%%%GFCC reduced Objective models training%%%%%
+[MSE_train,MSE_test,M] = Select_Features(GFCC_Training_mx,GFCC_Training_labels);
+GFCC_Red_Training_mx=GFCC_Training_mx(:,M(1:7));
+GFCC_Red_Test_mx=GFCC_Test_mx(:,M(1:7));
+GFCC_Red_Input=[GFCC_Red_Training_mx GFCC_Training_labels];
+GFCC_LR_Red=trainGFCC_LR_Red(GFCC_Red_Input);
+GFCC_SVR_Red=trainGFCC_SVR_Red(GFCC_Red_Input);
+GFCC_GPR_Red=trainGFCC_GPR_Red(GFCC_Red_Input);
+GFCC_DNN_Red=run_net(GFCC_Training_mx,GFCC_Training_labels);
+Training_Correlation=corr(GFCC_Training_labels,GFCC_LR_Red.predictFcn(GFCC_Red_Training_mx));
+Test_Correlation=corr(GFCC_Test_labels,GFCC_LR_Red.predictFcn(GFCC_Red_Test_mx));
